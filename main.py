@@ -1,30 +1,36 @@
 import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters
 import schedule
-import time
 import smtplib
 from email.mime.text import MIMEText
 import sqlite3
+from telegram import Update
 
-# Замените на свои значения
-TOKEN = '6909822287:AAEhmXuNfRmK_4djIlJoFPXfIe98aKZR91M'
+TOKEN = '6323519459:AAEB3ETBACHr5vnGWPsx9BB_ofoIdJr6H9Y'
 EMAIL_USER = '0ler0uz@gmail.com'
 EMAIL_PASSWORD = 'HenryFordsma11er'
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 587
 DATABASE_FILE = "reminders.db"
 
+updater = Updater(TOKEN)
+dp = updater.dispatcher
 
-def start(update, context):
-    update.message.reply_text("Привет! Я бот-напоминалка. Чтобы установить напоминание, используйте /setreminder")
+
+def start(update: Update):
+    update.message.reply_text(
+        "What’s up! Я самый ахрененный бот, который будет бить тебя по голове, если ты что-то забудешь или не успеешь. Чтобы тебя начали бить по голове, тыкни на эту штучку /setreminder")
+
+
+dp.add_handler(CommandHandler("start", start))
 
 
 def set_reminder(update, context):
     chat_id = update.message.chat_id
     context.user_data['chat_id'] = chat_id
 
-    update.message.reply_text("Отлично! Давайте установим напоминание.")
-    update.message.reply_text("Введите свой адрес электронной почты:")
+    update.message.reply_text("Я бы сказал, что ты молодец, но это явно не так! Пиши уже что у тебя там.")
+    update.message.reply_text("Мне еще твой имейлик нужен, там тоже по голове тебе стучать буду:")
     return 'email'
 
 
@@ -32,7 +38,7 @@ def get_email(update, context):
     email = update.message.text
     context.user_data['email'] = email
 
-    update.message.reply_text("Теперь введите свой телефон:")
+    update.message.reply_text("Номерок скинь(и желательно паспортные данные):")
     return 'phone'
 
 
@@ -40,7 +46,7 @@ def get_phone(update, context):
     phone = update.message.text
     context.user_data['phone'] = phone
 
-    update.message.reply_text("Введите срок дедлайна (например, 2023-12-31):")
+    update.message.reply_text("скажи мне до какого времени мне тебя мутузить:")
     return 'deadline'
 
 
@@ -48,7 +54,7 @@ def get_deadline(update, context):
     deadline = update.message.text
     context.user_data['deadline'] = deadline
 
-    update.message.reply_text("Введите цель/задачу, которую необходимо выполнить:")
+    update.message.reply_text("И ради чего я тебя мутузить буду:")
     return 'goal'
 
 
@@ -59,10 +65,10 @@ def get_goal(update, context, deadline=None):
     # Сохраняем данные в базе данных или файле
     save_reminder_data(context.user_data)
 
-    update.message.reply_text("Напоминание установлено! Я вас оповещу за час до дедлайна.")
+    update.message.reply_text("Все готово солнышко, готовься страдать от головной боли")
 
     # Запускаем планировщик для отправки напоминания
-    schedule.every().day.at(f"{deadline} 00:00").do(send_reminder, context=context)
+    schedule.every().day.at(f"{context.user_data['deadline']} 00:00").do(send_reminder, context=context)
 
     return 'done'
 
@@ -72,12 +78,12 @@ def send_reminder(context):
     email = context.job.context['email']
     goal = context.job.context['goal']
 
-    # Отправка напоминания в Telegram
     bot = telegram.Bot(token=TOKEN)
-    bot.send_message(chat_id=chat_id, text=f"Напоминание: Срок выполнения задачи '{goal}' истекает сегодня!")
+    bot.send_message(chat_id=chat_id,
+                     text=f"Напоминание: Я тебя последний раз предупреждаю '{goal}' НЕ сделаешь все седня, тебя мертвым в канаве найдут!")
 
-    # Отправка напоминания на электронную почту
-    send_email(email, f"Напоминание: Срок выполнения задачи '{goal}' истекает сегодня!")
+    send_email(email,
+               f"Напоминание: Я тебя последний раз предупреждаю '{goal}' НЕ сделаешь все седня, тебя мертвым в канаве найдут!")
 
 
 def save_reminder_data(data):
@@ -126,7 +132,7 @@ def send_email(to_email, message):
 def main():
     create_table()
 
-    updater = Updater(TOKEN, use_context=True)
+    updater = Updater(TOKEN)
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
@@ -139,9 +145,4 @@ def main():
 
     updater.start_polling()
 
-    # Останавливаем бота при нажатии Ctrl+C
     updater.idle()
-
-
-if __name__ == '__main__':
-    main()
